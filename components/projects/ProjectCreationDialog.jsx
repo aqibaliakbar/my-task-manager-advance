@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -42,15 +44,16 @@ function ProjectCreationDialog({ isOpen, onClose, teamId }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
 
+  const hasTeams = teams.length > 0 || teamId;
+
   const [formData, setFormData] = useState({
     name: "",
-    privacy: "private", // lowercase initial value
+    privacy: "private",
     team_id: teamId || "",
     created_by: null,
     created_at: new Date().toISOString(),
   });
 
-  // Add useEffect to update created_by when user session is available
   useEffect(() => {
     if (user?.id) {
       setFormData((prev) => ({
@@ -76,7 +79,7 @@ function ProjectCreationDialog({ isOpen, onClose, teamId }) {
     if (!selectedTeamId) {
       toast({
         title: "Error",
-        description: "Please select a team",
+        description: "Please create or select a team first",
         variant: "destructive",
       });
       return;
@@ -112,7 +115,7 @@ function ProjectCreationDialog({ isOpen, onClose, teamId }) {
 
       setFormData({
         name: "",
-        privacy: "Private",
+        privacy: "private",
         team_id: selectedTeamId,
         created_by: user.id,
         created_at: new Date().toISOString(),
@@ -138,6 +141,7 @@ function ProjectCreationDialog({ isOpen, onClose, teamId }) {
   const handleTeamDialogClose = () => {
     setIsTeamDialogOpen(false);
   };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -145,6 +149,16 @@ function ProjectCreationDialog({ isOpen, onClose, teamId }) {
           <DialogHeader>
             <DialogTitle>Create Project</DialogTitle>
           </DialogHeader>
+
+          {!hasTeams && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                You need to create a team before you can create a project
+              </AlertDescription>
+            </Alert>
+          )}
+
           <form onSubmit={handleSubmit} className="grid gap-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Project Name</label>
@@ -153,69 +167,73 @@ function ProjectCreationDialog({ isOpen, onClose, teamId }) {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="Enter project name"
+                placeholder={
+                  hasTeams ? "Enter project name" : "Create a team first"
+                }
                 required
+                disabled={!hasTeams}
               />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Privacy</label>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Privacy</label>
-                <Select
-                  value={formData.privacy}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, privacy: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select privacy" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="private">Private</SelectItem>
-                    <SelectItem value="public">Public</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select
+                value={formData.privacy}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, privacy: value })
+                }
+                disabled={!hasTeams}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select privacy" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">Private</SelectItem>
+                  <SelectItem value="public">Public</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {!teamId && teams.length > 0 ? (
+            {!teamId && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Team</label>
-                <Select
-                  value={formData.team_id}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, team_id: value })
-                  }
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select team" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {teams.length > 0 ? (
+                  <Select
+                    value={formData.team_id}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, team_id: value })
+                    }
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teams.map((team) => (
+                        <SelectItem key={team.id} value={team.id}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleCreateWorkforce}
+                  >
+                    Create Workforce
+                  </Button>
+                )}
               </div>
-            ) : !teamId ? (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Team</label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleCreateWorkforce}
-                >
-                  Create Workforce
-                </Button>
-              </div>
-            ) : null}
+            )}
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isSubmitting || !hasTeams}
+            >
               {isSubmitting ? "Creating..." : "Create Project"}
             </Button>
           </form>
